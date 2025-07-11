@@ -121,7 +121,7 @@ export const GameInterface: React.FC = () => {
     if (realTimeSync && session && currentUserId && connectionStatus === 'disconnected') {
       connectToSession()
     }
-  }, [realTimeSync, session, currentUserId, connectionStatus])
+  }, [realTimeSync, session, currentUserId, connectionStatus, connectToSession])
 
   // Show celebration when there's agreement
   useEffect(() => {
@@ -133,6 +133,21 @@ export const GameInterface: React.FC = () => {
       }
     }
   }, [showResults, session?.settings.enableFunFeatures, showCelebration, calculateResults])
+
+  // Listen for countdown events from other clients
+  useEffect(() => {
+    const handleCountdownEvent = () => {
+      if (session?.settings.showCountdown) {
+        setShowCountdown(true)
+      }
+    }
+
+    const element = document.querySelector('[data-countdown-trigger]')
+    if (element) {
+      element.addEventListener('startCountdown', handleCountdownEvent)
+      return () => element.removeEventListener('startCountdown', handleCountdownEvent)
+    }
+  }, [session?.settings.showCountdown])
 
   if (!session || !currentUserId) {
     return null
@@ -178,21 +193,6 @@ export const GameInterface: React.FC = () => {
       revealVotes()
     }
   }
-
-  // Listen for countdown events from other clients
-  useEffect(() => {
-    const handleCountdownEvent = () => {
-      if (session?.settings.showCountdown) {
-        setShowCountdown(true)
-      }
-    }
-
-    const element = document.querySelector('[data-countdown-trigger]')
-    if (element) {
-      element.addEventListener('startCountdown', handleCountdownEvent)
-      return () => element.removeEventListener('startCountdown', handleCountdownEvent)
-    }
-  }, [session?.settings.showCountdown])
 
   const handleCountdownComplete = () => {
     setShowCountdown(false)

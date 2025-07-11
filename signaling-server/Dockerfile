@@ -1,4 +1,12 @@
 # Multi-stage build for signaling server
+
+# Stage 1: Dependencies
+FROM node:18-alpine AS deps
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Stage 2: Builder
 FROM node:18-alpine AS builder
 WORKDIR /app
 
@@ -13,6 +21,7 @@ COPY src/ ./src/
 # Build TypeScript
 RUN npm run build
 
+# Stage 3: Runner
 FROM node:18-alpine AS runner
 WORKDIR /app
 
