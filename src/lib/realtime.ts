@@ -232,7 +232,7 @@ class WebSocketRealTimeSync implements RealTimeSync {
     this.cleanup()
 
     try {
-      console.log('🔗 Connecting to WebSocket:', process.env.NEXT_PUBLIC_SIGNALING_SERVER_URL)
+      console.log('🔗 Connecting to WebSocket realtime:', process.env.NEXT_PUBLIC_SIGNALING_SERVER_URL)
       const wsUrl = process.env.NEXT_PUBLIC_SIGNALING_SERVER_URL || 'ws://localhost:8080'
       this.ws = new WebSocket(wsUrl)
 

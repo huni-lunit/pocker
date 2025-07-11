@@ -69,12 +69,11 @@ export const Celebration: React.FC<CelebrationProps> = ({ isVisible, onComplete 
   useEffect(() => {
     if (!isVisible) return
 
-    // Single quick sparkle - just one pop and gone
     const newFireworks = [{
       id: 0,
       x: window.innerWidth * 0.5, // Center of screen
       y: window.innerHeight * 0.3, // Upper portion of screen
-      emoji: '✨' // Single sparkle emoji
+      emoji: '🎇🎇🎇'
     }]
 
     setFireworks(newFireworks)

@@ -38,6 +38,7 @@ export const JoinSession: React.FC<JoinSessionProps> = ({ onSessionJoined }) => 
       localStorage.setItem(`userName`, playerName.trim())
       
       // Create session on signaling server
+      console.log('🔗 Connecting to WebSocket join session:', process.env.NEXT_PUBLIC_SIGNALING_SERVER_URL)
       const serverUrl = process.env.NEXT_PUBLIC_SIGNALING_SERVER_URL?.replace('ws://', 'http://').replace('wss://', 'https://') || 'http://localhost:8080'
       const facilitatorId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       
