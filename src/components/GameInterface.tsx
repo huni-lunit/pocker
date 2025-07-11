@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { PlayerGrid, VotingCard, Button, Card, Modal } from '@/components/ui'
 import { GameSettings } from '@/components/GameSettings'
 import { ConnectionStatus } from '@/components/ConnectionStatus'
-import { EmojiProjectile, Celebration, EmojiSelector } from '@/components/EmojiProjectile'
+import { EmojiProjectile, Celebration, EmojiSelector, EmojiOverlay } from '@/components/EmojiProjectile'
 import { CountdownAnimation, MiniCountdown } from '@/components/CountdownAnimation'
 import { useGameStore } from '@/lib/store'
 import { useConnectionStatus } from '@/lib/realtime'
@@ -42,9 +42,69 @@ export const GameInterface: React.FC = () => {
     emoji: string
     fromPosition: { x: number; y: number }
     toPosition: { x: number; y: number }
+    targetPlayerId: string
   }>>([])
   const [showCelebration, setShowCelebration] = useState(false)
   const [showCountdown, setShowCountdown] = useState(false)
+  const [emojiOverlays, setEmojiOverlays] = useState<Array<{
+    id: string
+    playerId: string
+    emoji: string
+    timestamp: number
+  }>>([])
+
+  // Listen for incoming emoji events
+  useEffect(() => {
+    if (!realTimeSync) return
+
+    const handleEmojiEvent = (event: any) => {
+      if (event.type === 'EMOJI_SENT') {
+        const { fromPlayerId, toPlayerId, emoji } = event.payload
+        
+        // Show projectile animation for all users
+        const fromElement = document.querySelector(`[data-player-id="${fromPlayerId}"]`)
+        const toElement = document.querySelector(`[data-player-id="${toPlayerId}"]`)
+        
+        if (fromElement && toElement) {
+          const fromRect = fromElement.getBoundingClientRect()
+          const toRect = toElement.getBoundingClientRect()
+          
+          const fromPosition = {
+            x: fromRect.left + fromRect.width / 2,
+            y: fromRect.top + fromRect.height / 2
+          }
+          
+          const toPosition = {
+            x: toRect.left + toRect.width / 2,
+            y: toRect.top + toRect.height / 2
+          }
+
+          const projectile = {
+            id: `emoji-${Date.now()}-${Math.random()}`,
+            emoji,
+            fromPosition,
+            toPosition,
+            targetPlayerId: toPlayerId
+          }
+
+          setProjectiles(prev => [...prev, projectile])
+
+          // Add emoji overlay that will appear after projectile completes
+          setTimeout(() => {
+            const overlayId = `overlay-${Date.now()}-${Math.random()}`
+            setEmojiOverlays(prev => [...prev, {
+              id: overlayId,
+              playerId: toPlayerId,
+              emoji,
+              timestamp: Date.now()
+            }])
+          }, 500) // Show overlay when projectile completes
+        }
+      }
+    }
+
+    realTimeSync.onEvent(handleEmojiEvent)
+  }, [realTimeSync])
 
   // Always call hooks unconditionally
   const connectionStatus = useConnectionStatus(realTimeSync)
@@ -93,24 +153,46 @@ export const GameInterface: React.FC = () => {
     submitVote(vote)
     
     // Check if auto-reveal is enabled and all players have voted
-    if (session.settings.autoReveal) {
-      // Use setTimeout to check after state update
-      setTimeout(() => {
-        const updatedSession = useGameStore.getState().session
-        if (updatedSession?.players.every(p => p.hasVoted)) {
+    setTimeout(() => {
+      const { session } = useGameStore.getState()
+      if (session?.settings.autoReveal) {
+        const allPlayersVoted = session.players.every(p => p.hasVoted)
+        if (allPlayersVoted) {
           revealVotes()
         }
-      }, 100)
-    }
+      }
+    }, 100)
   }
 
   const handleRevealVotes = () => {
     if (session.settings.showCountdown) {
+      // Send countdown event to all clients
+      if (realTimeSync?.status === 'connected') {
+        realTimeSync.sendEvent({
+          type: 'COUNTDOWN_STARTED',
+          payload: {}
+        })
+      }
       setShowCountdown(true)
     } else {
       revealVotes()
     }
   }
+
+  // Listen for countdown events from other clients
+  useEffect(() => {
+    const handleCountdownEvent = () => {
+      if (session?.settings.showCountdown) {
+        setShowCountdown(true)
+      }
+    }
+
+    const element = document.querySelector('[data-countdown-trigger]')
+    if (element) {
+      element.addEventListener('startCountdown', handleCountdownEvent)
+      return () => element.removeEventListener('startCountdown', handleCountdownEvent)
+    }
+  }, [session?.settings.showCountdown])
 
   const handleCountdownComplete = () => {
     setShowCountdown(false)
@@ -129,34 +211,18 @@ export const GameInterface: React.FC = () => {
   }
 
   const handleEmojiSelect = (emoji: string) => {
-    if (!targetPlayer) return
+    if (!targetPlayer || !currentUserId) return
 
-    // Get current user position (approximate center of screen)
-    const currentUserElement = document.querySelector('.current-user')
-    const targetElement = document.querySelector(`[data-player-id="${targetPlayer.id}"]`)
-    
-    if (currentUserElement && targetElement) {
-      const fromRect = currentUserElement.getBoundingClientRect()
-      const toRect = targetElement.getBoundingClientRect()
-      
-      const fromPosition = {
-        x: fromRect.left + fromRect.width / 2,
-        y: fromRect.top + fromRect.height / 2
-      }
-      
-      const toPosition = {
-        x: toRect.left + toRect.width / 2,
-        y: toRect.top + toRect.height / 2
-      }
-
-      const projectile = {
-        id: `projectile-${Date.now()}`,
-        emoji,
-        fromPosition,
-        toPosition
-      }
-
-      setProjectiles(prev => [...prev, projectile])
+    // Send emoji event to all players in the session
+    if (realTimeSync?.status === 'connected') {
+      realTimeSync.sendEvent({
+        type: 'EMOJI_SENT',
+        payload: {
+          fromPlayerId: currentUserId,
+          toPlayerId: targetPlayer.id,
+          emoji
+        }
+      })
     }
 
     setTargetPlayer(null)
@@ -164,6 +230,10 @@ export const GameInterface: React.FC = () => {
 
   const handleProjectileComplete = (projectileId: string) => {
     setProjectiles(prev => prev.filter(p => p.id !== projectileId))
+  }
+
+  const handleEmojiOverlayComplete = (overlayId: string) => {
+    setEmojiOverlays(prev => prev.filter(o => o.id !== overlayId))
   }
 
 
@@ -214,9 +284,7 @@ export const GameInterface: React.FC = () => {
               duration={3}
               onComplete={handleCountdownComplete}
             >
-              <Button onClick={handleRevealVotes} className="mt-4">
-                {session.settings.showCountdown ? 'Reveal Votes (3s countdown)' : 'Reveal Votes'}
-              </Button>
+              <Button onClick={handleRevealVotes} className="mt-4">Reveal Votes</Button>
             </MiniCountdown>
           )}
         </div>
@@ -243,7 +311,7 @@ export const GameInterface: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50" data-countdown-trigger>
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-4">
@@ -394,7 +462,17 @@ export const GameInterface: React.FC = () => {
               emoji={projectile.emoji}
               fromPosition={projectile.fromPosition}
               toPosition={projectile.toPosition}
+              targetPlayerId={projectile.targetPlayerId}
               onComplete={() => handleProjectileComplete(projectile.id)}
+            />
+          ))}
+
+          {emojiOverlays.map((overlay) => (
+            <EmojiOverlay
+              key={overlay.id}
+              emoji={overlay.emoji}
+              playerId={overlay.playerId}
+              onComplete={() => handleEmojiOverlayComplete(overlay.id)}
             />
           ))}
 

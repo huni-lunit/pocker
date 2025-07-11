@@ -2,64 +2,60 @@
 
 import React, { useState, useEffect } from 'react'
 
+// Emoji projectile component
 interface EmojiProjectileProps {
   emoji: string
   fromPosition: { x: number; y: number }
   toPosition: { x: number; y: number }
   onComplete: () => void
+  targetPlayerId?: string
 }
 
-export const EmojiProjectile: React.FC<EmojiProjectileProps> = ({
-  emoji,
-  fromPosition,
-  toPosition,
-  onComplete
+export const EmojiProjectile: React.FC<EmojiProjectileProps> = ({ 
+  emoji, 
+  fromPosition, 
+  toPosition, 
+  onComplete,
+  targetPlayerId
 }) => {
-  const [position, setPosition] = useState(fromPosition)
-  const [isAnimating, setIsAnimating] = useState(false)
+  const [isVisible, setIsVisible] = useState(true)
 
   useEffect(() => {
-    setIsAnimating(true)
-    
-    const duration = 1000 // 1 second animation
-    const startTime = Date.now()
-    
-    const animate = () => {
-      const elapsed = Date.now() - startTime
-      const progress = Math.min(elapsed / duration, 1)
-      
-      // Easing function for smooth animation
-      const easeOutQuart = 1 - Math.pow(1 - progress, 4)
-      
-      const newX = fromPosition.x + (toPosition.x - fromPosition.x) * easeOutQuart
-      const newY = fromPosition.y + (toPosition.y - fromPosition.y) * easeOutQuart
-      
-      setPosition({ x: newX, y: newY })
-      
-      if (progress < 1) {
-        requestAnimationFrame(animate)
-      } else {
-        onComplete()
-      }
-    }
-    
-    requestAnimationFrame(animate)
-  }, [fromPosition, toPosition, onComplete])
+    const timer = setTimeout(() => {
+      setIsVisible(false)
+      onComplete()
+    }, 500) // Duration of projectile animation
+
+    return () => clearTimeout(timer)
+  }, [onComplete])
+
+  if (!isVisible) return null
 
   return (
     <div
-      className="fixed pointer-events-none z-50 text-2xl transition-all duration-1000 ease-out"
+      className="fixed pointer-events-none z-50 text-2xl animate-bounce"
       style={{
-        left: `${position.x}px`,
-        top: `${position.y}px`,
+        left: fromPosition.x,
+        top: fromPosition.y,
         transform: 'translate(-50%, -50%)',
-        opacity: isAnimating ? 1 : 0
-      }}
+        animation: `projectile-flight 1s ease-in-out forwards`,
+        '--end-x': `${toPosition.x - fromPosition.x}px`,
+        '--end-y': `${toPosition.y - fromPosition.y}px`,
+      } as React.CSSProperties & { '--end-x': string; '--end-y': string }}
     >
       {emoji}
+      <style jsx>{`
+        @keyframes projectile-flight {
+          to {
+            transform: translate(calc(-50% + var(--end-x)), calc(-50% + var(--end-y)));
+          }
+        }
+      `}</style>
     </div>
   )
 }
+
+
 
 // Celebration component for consensus
 interface CelebrationProps {
@@ -87,7 +83,7 @@ export const Celebration: React.FC<CelebrationProps> = ({ isVisible, onComplete 
     const timer = setTimeout(() => {
       setFireworks([])
       onComplete()
-    }, 300) // Very short duration - just a quick pop
+    }, 500) // Very short duration - just a quick pop
 
     return () => clearTimeout(timer)
   }, [isVisible, onComplete])
@@ -161,6 +157,42 @@ export const EmojiSelector: React.FC<EmojiSelectorProps> = ({
           Cancel
         </button>
       </div>
+    </div>
+  )
+} 
+
+// Component to show emoji overlay on player cards
+interface EmojiOverlayProps {
+  emoji: string
+  playerId: string
+  onComplete: () => void
+}
+
+export const EmojiOverlay: React.FC<EmojiOverlayProps> = ({ emoji, playerId, onComplete }) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onComplete()
+    }, 1000) // Show for 1 second
+
+    return () => clearTimeout(timer)
+  }, [onComplete])
+
+  const playerElement = document.querySelector(`[data-player-id="${playerId}"]`)
+  if (!playerElement) return null
+
+  const rect = playerElement.getBoundingClientRect()
+
+  return (
+    <div
+      className="fixed pointer-events-none z-20 text-2xl animate-ping"
+      style={{
+        left: rect.right - 10,
+        top: rect.top + 10,
+        animationDuration: '0.5s',
+        animationIterationCount: '2'
+      }}
+    >
+      {emoji}
     </div>
   )
 } 

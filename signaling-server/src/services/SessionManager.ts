@@ -55,11 +55,14 @@ export class SessionManager {
     const session = this.sessions.get(sessionId)
     if (!session) return false
 
-    const playerIndex = session.players.findIndex(p => p.id === playerId)
-    if (playerIndex >= 0) {
-      session.players[playerIndex].isOnline = false
+    // Remove player from session
+    session.players = session.players.filter(p => p.id !== playerId)
+    
+    // Remove player's vote if there's an active voting round
+    if (session.currentVote && session.currentVote.votes[playerId]) {
+      delete session.currentVote.votes[playerId]
     }
-
+    
     session.lastActivity = new Date()
     return true
   }

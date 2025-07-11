@@ -196,6 +196,15 @@ async function handleSyncEvent(connectionId: string, message: WebSocketMessage) 
       const { settings, facilitator, name, votingSystem } = event.payload
       sessionManager.updateSessionSettings(sessionId, settings, facilitator, name, votingSystem)
       break
+
+    case 'PLAYER_LEFT':
+      const { playerId: leftPlayerId } = event.payload
+      sessionManager.removePlayerFromSession(sessionId, leftPlayerId)
+      break
+
+    case 'EMOJI_SENT':
+      // No server-side processing needed for emoji events, just broadcast
+      break
   }
 
   // Broadcast event to all players in session

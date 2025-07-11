@@ -69,5 +69,16 @@ export interface ServerResponse {
   timestamp: number
 }
 
-// Re-export SyncEvent from realtime.ts for consistency
-export type { SyncEvent } from '@/lib/realtime' 
+// SyncEvent type definition (moved here to avoid circular imports)
+export type SyncEvent = 
+  | { type: 'PLAYER_JOINED'; payload: { player: Player } }
+  | { type: 'PLAYER_LEFT'; payload: { playerId: string } }
+  | { type: 'VOTE_SUBMITTED'; payload: { playerId: string; vote: string | number } }
+  | { type: 'VOTING_STARTED'; payload: { issueName?: string } }
+  | { type: 'VOTES_REVEALED'; payload: {} }
+  | { type: 'SESSION_UPDATED'; payload: { session: GameSession } }
+  | { type: 'PLAYER_RECONNECTED'; payload: { playerId: string } }
+  | { type: 'PLAYER_DISCONNECTED'; payload: { playerId: string } }
+  | { type: 'SETTINGS_UPDATED'; payload: { settings: any; facilitator?: string; name?: string; votingSystem?: string } }
+  | { type: 'COUNTDOWN_STARTED'; payload: {} }
+  | { type: 'EMOJI_SENT'; payload: { fromPlayerId: string; toPlayerId: string; emoji: string } } 

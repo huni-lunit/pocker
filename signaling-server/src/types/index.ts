@@ -51,6 +51,8 @@ export type SyncEvent =
   | { type: 'PLAYER_RECONNECTED'; payload: { playerId: string } }
   | { type: 'PLAYER_DISCONNECTED'; payload: { playerId: string } }
   | { type: 'SETTINGS_UPDATED'; payload: { settings: any; facilitator?: string; name?: string; votingSystem?: string } }
+  | { type: 'COUNTDOWN_STARTED'; payload: {} }
+  | { type: 'EMOJI_SENT'; payload: { fromPlayerId: string; toPlayerId: string; emoji: string } }
 
 export interface WebSocketMessage {
   type: 'join' | 'leave' | 'sync_event' | 'heartbeat'

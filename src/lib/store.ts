@@ -4,19 +4,6 @@ import { GameSession, Player, VotingRound, VotingSystem, VOTING_SYSTEMS } from '
 import { generateUserId, saveSessionToStorage } from './session'
 import { createRealTimeSync, RealTimeSync, saveOfflineVote, getOfflineVote, clearOfflineVote } from './realtime'
 
-// Get client ID from URL parameter for multi-client testing
-const getClientId = (): string => {
-  if (typeof window === 'undefined') return ''
-  const urlParams = new URLSearchParams(window.location.search)
-  const clientId = urlParams.get('client')
-  return clientId ? `-${clientId}` : ''
-}
-
-// Get storage key with client-specific namespace
-const getStorageKey = (): string => {
-  return `planning-poker-store${getClientId()}`
-}
-
 interface GameState {
   // Current session data
   session: GameSession | null
@@ -90,7 +77,16 @@ export const useGameStore = create<GameState>()(
       },
 
       clearSession: () => {
-        const { realTimeSync } = get()
+        const { realTimeSync, session, currentUserId } = get()
+        
+        // Send player left event before disconnecting
+        if (realTimeSync?.status === 'connected' && session && currentUserId) {
+          realTimeSync.sendEvent({
+            type: 'PLAYER_LEFT',
+            payload: { playerId: currentUserId }
+          })
+        }
+        
         realTimeSync?.disconnect()
         
         set({ 
@@ -102,7 +98,7 @@ export const useGameStore = create<GameState>()(
           realTimeSync: null
         })
         if (typeof window !== 'undefined') {
-          localStorage.removeItem(getStorageKey())
+          localStorage.removeItem('planning-poker-store')
         }
       },
 
@@ -128,15 +124,26 @@ export const useGameStore = create<GameState>()(
 
             case 'PLAYER_LEFT':
             case 'PLAYER_DISCONNECTED':
-              const updatedSession = {
-                ...session,
-                players: session.players.map(p => 
-                  p.id === event.payload.playerId 
-                    ? { ...p, isOnline: false }
-                    : p
-                )
+              const leftPlayerId = event.payload.playerId
+              const sessionForPlayerLeft = get().session
+              if (!sessionForPlayerLeft) break
+              
+              // Remove player from session
+              const updatedSessionAfterLeave = {
+                ...sessionForPlayerLeft,
+                players: sessionForPlayerLeft.players.filter(p => p.id !== leftPlayerId)
               }
-              set({ session: updatedSession })
+              
+              // If there's an active vote, remove the player's vote
+              if (updatedSessionAfterLeave.currentVote) {
+                const { [leftPlayerId]: removedVote, ...remainingVotes } = updatedSessionAfterLeave.currentVote.votes
+                updatedSessionAfterLeave.currentVote = {
+                  ...updatedSessionAfterLeave.currentVote,
+                  votes: remainingVotes
+                }
+              }
+              
+              set({ session: updatedSessionAfterLeave })
               break
 
             case 'VOTE_SUBMITTED':
@@ -198,6 +205,19 @@ export const useGameStore = create<GameState>()(
                 votingSystem: (votingSystem as VotingSystem) || currentSession.votingSystem
               }
               set({ session: updatedSessionFromEvent })
+              break
+
+            case 'COUNTDOWN_STARTED':
+              // Trigger countdown for all clients
+              const gameInterface = document.querySelector('[data-countdown-trigger]')
+              if (gameInterface) {
+                gameInterface.dispatchEvent(new CustomEvent('startCountdown'))
+              }
+              break
+
+            case 'EMOJI_SENT':
+              // Emoji events are handled in the GameInterface component
+              // No state changes needed in the store
               break
           }
         })
@@ -527,7 +547,7 @@ export const useGameStore = create<GameState>()(
       }
     }),
     {
-      name: getStorageKey(),
+      name: 'planning-poker-store',
       partialize: (state) => ({
         session: state.session,
         currentUserId: state.currentUserId

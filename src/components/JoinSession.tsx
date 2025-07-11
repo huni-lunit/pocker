@@ -6,14 +6,6 @@ import { useGameStore } from '@/lib/store'
 import { createSession } from '@/lib/session'
 import { GameSession } from '@/types'
 
-// Get client ID from URL parameter for multi-client testing
-const getClientId = (): string => {
-  if (typeof window === 'undefined') return ''
-  const urlParams = new URLSearchParams(window.location.search)
-  const clientId = urlParams.get('client')
-  return clientId ? `-${clientId}` : ''
-}
-
 interface JoinSessionProps {
   onSessionJoined: (session: GameSession, userId: string) => void
 }
@@ -43,11 +35,11 @@ export const JoinSession: React.FC<JoinSessionProps> = ({ onSessionJoined }) => 
 
     try {
       // Store player name in localStorage for WebSocket connection
-      localStorage.setItem(`userName${getClientId()}`, playerName.trim())
+      localStorage.setItem(`userName`, playerName.trim())
       
       // Create session on signaling server
       const serverUrl = process.env.NEXT_PUBLIC_SIGNALING_SERVER_URL?.replace('ws://', 'http://').replace('wss://', 'https://') || 'http://localhost:8080'
-      const facilitatorId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}${getClientId()}`
+      const facilitatorId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       
       const response = await fetch(`${serverUrl}/sessions`, {
         method: 'POST',
@@ -67,9 +59,10 @@ export const JoinSession: React.FC<JoinSessionProps> = ({ onSessionJoined }) => 
 
       const serverSession = await response.json()
       
-      // Convert server session to client session format
+      // Convert server session to client session format with proper name
       const session = {
         ...serverSession,
+        name: sessionName.trim(), // Use the name from the form
         players: serverSession.players.map((p: any) => ({
           ...p,
           isCurrentUser: p.id === facilitatorId
@@ -101,7 +94,7 @@ export const JoinSession: React.FC<JoinSessionProps> = ({ onSessionJoined }) => 
 
     try {
       // Store player name in localStorage for WebSocket connection
-      localStorage.setItem(`userName${getClientId()}`, playerName.trim())
+      localStorage.setItem(`userName`, playerName.trim())
       
       // Create a temporary session for joining
       // The real session will be received from the server

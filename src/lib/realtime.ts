@@ -1,17 +1,5 @@
 import React from 'react'
-import { GameSession, Player, WebSocketMessage, ServerResponse } from '@/types'
-
-// Real-time sync event types
-export type SyncEvent = 
-  | { type: 'PLAYER_JOINED'; payload: { player: Player } }
-  | { type: 'PLAYER_LEFT'; payload: { playerId: string } }
-  | { type: 'VOTE_SUBMITTED'; payload: { playerId: string; vote: string | number } }
-  | { type: 'VOTING_STARTED'; payload: { issueName?: string } }
-  | { type: 'VOTES_REVEALED'; payload: {} }
-  | { type: 'SESSION_UPDATED'; payload: { session: GameSession } }
-  | { type: 'PLAYER_RECONNECTED'; payload: { playerId: string } }
-  | { type: 'PLAYER_DISCONNECTED'; payload: { playerId: string } }
-  | { type: 'SETTINGS_UPDATED'; payload: { settings: any; facilitator?: string; name?: string; votingSystem?: string } }
+import { GameSession, Player, WebSocketMessage, ServerResponse, SyncEvent } from '@/types'
 
 // Connection status
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error'
@@ -232,7 +220,7 @@ class WebSocketRealTimeSync implements RealTimeSync {
   async connect(sessionId: string, userId: string, userName?: string): Promise<void> {
     this.sessionId = sessionId
     this.userId = userId
-    this.userName = userName || localStorage.getItem(`userName${getClientId()}`) || 'Anonymous'
+    this.userName = userName || localStorage.getItem('userName') || 'Anonymous'
     this.setStatus('connecting')
 
     // Clean up any existing connection first
@@ -488,17 +476,9 @@ export const createRealTimeSync = (type: 'simulated' | 'webrtc' | 'websocket' = 
   }
 }
 
-// Get client ID from URL parameter for multi-client testing
-const getClientId = (): string => {
-  if (typeof window === 'undefined') return ''
-  const urlParams = new URLSearchParams(window.location.search)
-  const clientId = urlParams.get('client')
-  return clientId ? `-${clientId}` : ''
-}
-
 // Offline storage for reconnection
 export const saveOfflineVote = (sessionId: string, userId: string, vote: string | number): void => {
-  const key = `offline_vote_${sessionId}_${userId}${getClientId()}`
+  const key = `offline_vote_${sessionId}_${userId}`
   const data = {
     vote,
     timestamp: Date.now()
@@ -507,7 +487,7 @@ export const saveOfflineVote = (sessionId: string, userId: string, vote: string 
 }
 
 export const getOfflineVote = (sessionId: string, userId: string): { vote: string | number; timestamp: number } | null => {
-  const key = `offline_vote_${sessionId}_${userId}${getClientId()}`
+  const key = `offline_vote_${sessionId}_${userId}`
   const data = localStorage.getItem(key)
   if (!data) return null
   
@@ -519,7 +499,7 @@ export const getOfflineVote = (sessionId: string, userId: string): { vote: strin
 }
 
 export const clearOfflineVote = (sessionId: string, userId: string): void => {
-  const key = `offline_vote_${sessionId}_${userId}${getClientId()}`
+  const key = `offline_vote_${sessionId}_${userId}`
   localStorage.removeItem(key)
 }
 
