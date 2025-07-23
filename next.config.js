@@ -5,7 +5,7 @@ const nextConfig = {
   
   // Environment variables for signaling server connection
   env: {
-    NEXT_PUBLIC_SIGNALING_SERVER_URL: process.env.SIGNALING_SERVER_URL || 'ws://localhost:8080',
+    NEXT_PUBLIC_SIGNALING_SERVER_URL: process.env.NEXT_PUBLIC_SIGNALING_SERVER_URL || 'ws://localhost:8080',
   },
 }
 

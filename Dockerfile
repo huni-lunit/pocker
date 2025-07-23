@@ -8,6 +8,8 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+ENV NEXT_PUBLIC_SIGNALING_SERVER_URL="wss://aipf-signaling-server.tig-dev.lunit.in"
+
 # Build the application
 RUN npm run build
 
@@ -33,6 +35,7 @@ EXPOSE 3000
 ENV PORT=3000
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
+ENV NEXT_PUBLIC_SIGNALING_SERVER_URL="wss://aipf-signaling-server.tig-dev.lunit.in"
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
