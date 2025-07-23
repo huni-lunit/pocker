@@ -220,7 +220,25 @@ class WebSocketRealTimeSync implements RealTimeSync {
   async connect(sessionId: string, userId: string, userName?: string): Promise<void> {
     this.sessionId = sessionId
     this.userId = userId
-    this.userName = userName || localStorage.getItem('userName') || 'Anonymous'
+    let finalUserName: string = userName || 'Anonymous'
+    
+    // If userName not provided, try to get from localStorage
+    if (!userName) {
+      try {
+        const stored = localStorage.getItem('planning-poker-store')
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          finalUserName = parsed.userName || 'Anonymous'
+        } else {
+          finalUserName = 'Anonymous'
+        }
+      } catch (error) {
+        console.error('Failed to get userName from storage:', error)
+        finalUserName = 'Anonymous'
+      }
+    }
+    
+    this.userName = finalUserName
     this.setStatus('connecting')
 
     // Clean up any existing connection first

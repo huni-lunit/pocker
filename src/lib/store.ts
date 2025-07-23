@@ -236,9 +236,22 @@ export const useGameStore = create<GameState>()(
         if (!session || !currentUserId || !realTimeSync) return
 
         try {
-          // Get the current user's name
+          // Get the current user's name from the session first, then fallback to localStorage
           const currentPlayer = session.players.find(p => p.id === currentUserId)
-          const userName = currentPlayer?.name || localStorage.getItem('userName') || 'Anonymous'
+          let userName = currentPlayer?.name || 'Anonymous'
+          
+          // If not found in session, try to get from localStorage
+          if (!currentPlayer?.name) {
+            try {
+              const stored = localStorage.getItem('planning-poker-store')
+              if (stored) {
+                const parsed = JSON.parse(stored)
+                userName = parsed.userName || 'Anonymous'
+              }
+            } catch (error) {
+              console.error('Failed to get userName from storage:', error)
+            }
+          }
           
           await realTimeSync.connect(session.id, currentUserId, userName)
           

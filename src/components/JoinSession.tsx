@@ -34,9 +34,6 @@ export const JoinSession: React.FC<JoinSessionProps> = ({ onSessionJoined }) => 
     setError('')
 
     try {
-      // Store player name in localStorage for WebSocket connection
-      localStorage.setItem(`userName`, playerName.trim())
-      
       // Create session on signaling server
       console.log('🔗 Connecting to WebSocket join session:', process.env.NEXT_PUBLIC_SIGNALING_SERVER_URL)
       const serverUrl = process.env.NEXT_PUBLIC_SIGNALING_SERVER_URL?.replace('ws://', 'http://').replace('wss://', 'https://') || 'http://localhost:8080'
@@ -60,10 +57,11 @@ export const JoinSession: React.FC<JoinSessionProps> = ({ onSessionJoined }) => 
 
       const serverSession = await response.json()
       
-      // Convert server session to client session format with proper name
+      // Convert server session to client session format with proper name and clear history
       const session = {
         ...serverSession,
         name: sessionName.trim(), // Use the name from the form
+        history: [], // Clear history for new session
         players: serverSession.players.map((p: any) => ({
           ...p,
           isCurrentUser: p.id === facilitatorId
@@ -94,9 +92,6 @@ export const JoinSession: React.FC<JoinSessionProps> = ({ onSessionJoined }) => 
     setError('')
 
     try {
-      // Store player name in localStorage for WebSocket connection
-      localStorage.setItem(`userName`, playerName.trim())
-      
       // Create a temporary session for joining
       // The real session will be received from the server
       const tempSession = createSession('Joining...', playerName.trim())

@@ -420,11 +420,12 @@ export const GameInterface: React.FC = () => {
               No voting history yet. Start your first vote!
             </p>
           ) : (
-            session.history.map((round, index) => (
+            // Reverse the array to show most recent first
+            [...session.history].reverse().map((round, index) => (
               <div key={round.id} className="border rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-medium">
-                    {round.issueName || `Vote #${index + 1}`}
+                    {round.issueName || `Vote #${session.history.length - index}`}
                   </h4>
                   <div className="text-sm text-gray-500">
                     {round.startTime.toLocaleString()}

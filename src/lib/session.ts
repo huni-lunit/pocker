@@ -83,7 +83,7 @@ export const saveSessionToStorage = (session: GameSession, userId: string, userN
   }
   
   if (typeof window !== 'undefined') {
-    localStorage.setItem('planningPoker', JSON.stringify(storage))
+    localStorage.setItem('planning-poker-store', JSON.stringify(storage))
   }
 }
 
@@ -91,7 +91,7 @@ export const loadSessionFromStorage = (): SessionStorage | null => {
   if (typeof window === 'undefined') return null
   
   try {
-    const stored = localStorage.getItem('planningPoker')
+    const stored = localStorage.getItem('planning-poker-store')
     if (!stored) return null
     
     const parsed = JSON.parse(stored)
@@ -124,6 +124,6 @@ export const loadSessionFromStorage = (): SessionStorage | null => {
 
 export const clearSessionStorage = (): void => {
   if (typeof window !== 'undefined') {
-    localStorage.removeItem('planningPoker')
+    localStorage.removeItem('planning-poker-store')
   }
 } 
